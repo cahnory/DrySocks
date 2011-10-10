@@ -1,0 +1,12 @@
+<?php
+
+	$this->wrap('layout');
+
+?>
+<div id="error">
+	<img src="img/error404.png" alt="Not Found" />
+	<h1>Internal server error</h1>
+	<p>
+		<?php echo $exception->getMessage() ?>
+	</p>
+</div>

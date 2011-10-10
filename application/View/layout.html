@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--[if IE 5]><html class="ie ie5 lt-ie6 lt-ie7 lt-ie8 lt-ie9 lte-ie5 lte-ie6 lte-ie7 lte-ie8 lte-ie9 gte-ie5" id="no-js"><![endif]-->
+<!--[if IE 6]><html class="ie ie6 lt-ie7 lt-ie8 lt-ie9 lte-ie6 lte-ie7 lte-ie8 lte-ie9 gte-ie5 gte-ie6 gt-ie5" id="no-js"><![endif]-->
+<!--[if IE 7]><html class="ie ie7 lt-ie8 lt-ie9 lte-ie7 lte-ie8 lte-ie9 gte-ie5 gte-ie6 gte-ie7 gt-ie5 gt-ie6" id="no-js"><![endif]-->
+<!--[if IE 8]><html class="ie ie8 lt-ie9 lte-ie8 lte-ie9 gte-ie5 gte-ie6 gte-ie7 gte-ie8 gt-ie5 gt-ie6 gt-ie7" id="no-js"><![endif]-->
+<!--[if IE 9]><html class="ie ie9 lte-ie9 gte-ie5 gte-ie6 gte-ie7 gte-ie8 gte-ie9 gt-ie5 gt-ie6 gt-ie7 gt-ie8" id="no-js"><![endif]-->
+<!--[if gt IE 9]><!--><html class="no-js not-ie" id="no-js"><!--<![endif]-->
+<head>
+	<meta charset="utf-8" />
+	<base href="<%= $this->request->getBase() %>" />
+	<!-- !Meta -->
+	<title><%= $this->title %></title>
+	
+	<!-- !Stylesheets -->
+	<link rel="stylesheet" type="text/css" href="css/main.css" />
+	
+	<!-- !Favicon -->
+	<!-- For iPhone 4 with high-resolution Retina display: -->
+	<link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114x114-precomposed.png">
+	<!-- For first-generation iPad: -->
+	<link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-72x72-precomposed.png">
+	<!-- For non-Retina iPhone, iPod Touch, and Android 2.1+ devices: -->
+	<link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png">
+	<!-- Classic favicon -->
+	<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+	
+	<script>document.documentElement.id='js'</script>
+</head>
+<body>
+	<div id="header" role="banner">
+		<h1 id="branding">
+			<a href="#" title="Accueil - Site title">
+				<img id="logo" src="img/logo.png" width="127" height="149" alt="Site title" />
+				<img id="qr-code" src="img/qr-code.png" height="70" width="70" alt="qr-code" />
+				Site title
+			</a>
+		</h1>
+	</div>
+	
+	<%= $this->getWrappedContent() %>
+</body>
+</html>

@@ -1,0 +1,172 @@
+# ----------------------------------------------------------------------
+# !Misc
+#  1. Set default charset to UTF-8
+#  2. Remove PHPSESSID url parameter
+#  3. Turn off folder listing
+# ----------------------------------------------------------------------
+	AddDefaultCharset	UTF-8
+	SetEnv				SESSION_USE_TRANS_SID 0
+	Options				-Indexes
+
+# ----------------------------------------------------------------------
+# !PHP
+#  1. Force version 5 of PHP
+#  2. Set multibyte string charset to UTF-8 (mb_functions)
+#  3. Turn off PHP Magic Quotes
+#  4. Turn off PHP Register Globals
+#  5. Turn off PHP Short Open Tags
+#  6. Turn on  PHP Asp Tags (for templating)
+# ----------------------------------------------------------------------
+	SetEnv PHP_VER 5
+	SetEnv PHP_VER 5_TEST
+	SetEnv PHP_VER 5.3
+<IfModule mod_php5.c>
+	php_value mbstring.internal_encoding	UTF-8
+	php_flag  magic_quotes_gpc				off
+    php_flag  register_globals				off
+	php_flag  short_open_tag				off
+	php_flag  asp_tags						on
+</IfModule>
+<IfModule mod_php4.c>
+	php_value mbstring.internal_encoding	UTF-8
+	php_flag  magic_quotes_gpc				off
+    php_flag  register_globals				off
+	php_flag  short_open_tag				off
+	php_flag  asp_tags						on
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !MIME types
+# ----------------------------------------------------------------------
+<IfModule mod_mime.c>
+	# Fonts
+	AddType application/vnd.ms-fontobject	eot
+	AddType font/opentype					otf
+	AddType application/x-font-ttf			ttc ttf
+	AddType application/x-font-woff			woff
+	
+	# Audio
+	AddType audio/mp4						m4a
+	AddType audio/ogg						oga ogg
+
+	# Video
+	AddType video/x-flv						flv
+	AddType video/ogg						ogv
+	AddType video/mp4						m4v mp4
+	AddType video/webm						webm
+	
+	# Images
+	AddType image/x-icon					ico
+	AddType image/svg+xml					svg
+	AddType image/webp						webp
+	
+	# Scripts/Data
+	AddType text/css						css
+	AddType text/x-component				htc
+	AddType text/cache-manifest				manifest
+	AddType text/x-vcard					vcf
+	
+	# Javascript
+	AddType application/javascript			js
+	AddType application/json				json
+	
+	# Browser extensions
+	AddType application/x-chrome-extension crx
+	AddType application/octet-stream       safariextz
+	AddType application/x-xpinstall        xpi
+
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !Etag
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+	Header unset ETag
+</IfModule>
+
+	FileETag None
+
+
+# ----------------------------------------------------------------------
+# !Gzip Deflate
+# ----------------------------------------------------------------------
+<IfModule mod_deflate.c>
+	# Compression Gzip Deflate
+	SetOutputFilter DEFLATE
+	
+	# Avoid some types
+	SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png|bmp|pdf|svg|webp)$ no-gzip dont-vary
+	SetEnvIfNoCase Request_URI \.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+	SetEnvIfNoCase Request_URI \.(?:m4a|oga|ogg|flv|ogv|m4v|mp4|webm)$ no-gzip dont-vary
+	
+	# Netscape 4.x cannot handle compression of types other than text/html
+	# Netscape 4.06-4.08 have problems with decompressing html files
+	# MSIE masquerades as Netscape, turn off the restrictions defined before
+	BrowserMatch ^Mozilla/4 gzip-only-text/html
+	BrowserMatch ^Mozilla/4\.0[678] no-gzip
+	BrowserMatch \bMSI[E] !no-gzip !gzip-only-text/html
+	
+	# Make sure proxies don’t deliver the wrong content
+	<IfModule mod_headers.c>
+		Header append Vary User-Agent env=!dont-vary
+		Header append Vary Accept-Encoding
+	</IfModule>
+
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !Expiration
+# ----------------------------------------------------------------------
+<IfModule mod_expires.c>
+	ExpiresActive On
+	ExpiresDefault "access plus 1 year"
+	
+	<FilesMatch "\.(html?|php)$">
+		ExpiresDefault "access plus 0 seconds"
+	</FilesMatch>
+	
+	<FilesMatch "^(favicon\.ico|apple-touch-icon\.png)$">
+		ExpiresDefault "access plus 1 week"
+	</FilesMatch>
+
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !Cache
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+	Header set Cache-Control "max-age=31556926, public"
+	
+	<FilesMatch "\.(html?|php)$">
+		Header set Cache-Control "max-age=0, public"
+	</FilesMatch>
+	
+	<FilesMatch "^(favicon\.ico|apple-touch-icon\.png)$">
+		Header set Cache-Control "max-age=604800, public"
+	</FilesMatch>
+
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !IE compatibility mode
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+	# Tel IE to use highest compatibility mode available
+	<FilesMatch "\.(html?|php)$" >
+		Header set X-UA-Compatible "IE=Edge,chrome=1"
+	</FilesMatch>
+	
+</IfModule>
+
+# ----------------------------------------------------------------------
+# !URL Rewriting
+# ----------------------------------------------------------------------
+RewriteEngine	On
+#RewriteBase		/DS/
+
+# Search for public file
+RewriteRule ^(.+)$ public/$1
+
+# Launch to the application
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule .? application/index.php [QSA]
