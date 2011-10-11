@@ -41,33 +41,40 @@ namespace DS\Password;
  */
 class Protector
 {
-	protected $salt;
-	protected $saltPosition;
-	protected $unicSaltLength;
-	protected $unicSaltPosition;
-	protected $algorithm	= 'sha512';
+	protected $hashAlgorithm	= 'sha512';
+	protected $hashKey;
+	protected $bcryptCost		= 7;
+	protected $bcryptSalt		= NULL;
+	protected $salts			= array();
+	protected $preSalts			= array();
 	protected $processor;
 	
-	static public function generateSalt($length, $algorithm = 'sha512') {
+	public function addSalt(SaltInterface $salt) {
+		$this->salts[]	= $salt;
+	}
+	
+	public function addPreSalt(SaltInterface $salt) {
+		$this->preSalts[]		= $salt;
+	}
+	
+	public function setHash($algorithm, $key = NULL) {
 		if(!in_array($algorithm, hash_algos())) {
 			throw new \Exception('Unknown algorithm '.$algorithm);
 		}
-		$salt	=	NULL;
-		while(strlen($salt) < $length) {
-			// Hash with hash algorithm to make salt more transparent
-			$salt	.= hash($algorithm, uniqid(rand(), true));	
-		}
-		return	substr($salt, 0, $length);
-	}
-
-	public function setSalt($salt, $position = 0) {
-		$this->salt			= $salt;
-		$this->saltPosition	= $position;
+		$this->hashAlgorithm	= $algorithm;
+		$this->hashKey			= $key;
 	}
 	
-	public function setUnicSalt($length, $position = 0) {
-		$this->unicSaltLength	= $length;
-		$this->unicSaltPosition	= $position;
+	public function setBcrypt($cost, $salt = NULL)
+	{
+	    if(preg_match('#^[./0-9A-Za-z]{0,22}$#', $salt) === 0) {
+	    	throw new \Exception('bcrypt expects a salt of 0 to 22 digits of the alphabet [./0-9A-Za-z]');
+	    }
+	    if($cost < 4 || $cost > 31) {
+	    	throw new \Exception('bcrypt expects cost parameter between 4 and 31');
+		}
+		$this->bcryptCost	= $cost;
+		$this->bcryptSalt	= $salt;
 	}
 	
 	public function setProcessor($processor) {
@@ -77,41 +84,55 @@ class Protector
 		$this->processor	= $processor;
 	}
 	
-	public function setAlgorithm($algorithm) {
-		if(!in_array($algorithm, hash_algos())) {
-			throw new \Exception('Unknown algorithm '.$algorithm);
+	public function hash($password) {
+		// Add shared salts
+		foreach($this->preSalts as $key => $salt) {
+			$password	= $salt->apply($password);
 		}
-		$this->algorithm	= $algorithm;
-	}
-	
-	public function hash($password, $salt = NULL) {
-		if($this->salt) {
-			$password	= substr($password, 0, $this->saltPosition)
-						. $this->salt
-						. substr($password, $this->saltPosition);
-		}
-		$password	=	hash($this->algorithm, $password);
-		if($this->unicSaltLength) {
-			$password	= substr($password, 0, $this->unicSaltPosition)
-						. ($salt !== NULL ? $salt : self::generateSalt($this->unicSaltLength, $this->algorithm))
-						. substr($password, $this->unicSaltPosition);
-		}
+		
+		// Hash the password
+		$password	= hash_hmac($this->hashAlgorithm, $password, $this->hashKey);
+		
+		// Crypt the hash
+	    $password	= substr(crypt($password, '$2a$'.sprintf('%02d', $this->bcryptCost).'$'.$this->bcryptSalt), 29);
+		
+		// Apply user processing function
 		if($this->processor) {
 			$password	=	call_user_func($this->processor, $password);
 		}
+		
+		// Add password specific salts
+		foreach($this->salts as $salt) {
+			$salt->generate();
+			$password	= $salt->apply($password);
+		}
+		
 		return	$password;
 	}
 	
-	public function getPasswordSalt($password) {
-		$salt	= NULL;
-		if($this->unicSaltLength) {
-			$salt	= substr($password, $this->unicSaltPosition, $this->unicSaltLength);
-		}
-		return $salt;
-	}
-	
 	public function match($password, $hash) {
-		return $this->hash($password, $this->getPasswordSalt($hash)) === $hash;
+		// Remove salts from hash
+		$salts	= array_reverse($this->salts);
+		foreach($salts as $salt) {
+			$hash	= $salt->remove($hash);
+		}
+		
+		// Add shared salts
+		foreach($this->preSalts as $key => $salt) {
+			$password	= $salt->apply($password);
+		}
+		
+		// Hash the password
+		$password	= hash_hmac($this->hashAlgorithm, $password, $this->hashKey);
+		
+		// Crypt the password hash
+	    $password	= substr(crypt($password, '$2a$'.sprintf('%02d', $this->bcryptCost).'$'.$this->bcryptSalt), 29);
+		
+		// Apply user processing function
+		if($this->processor) {
+			$password	=	call_user_func($this->processor, $password);
+		}
+		return $password === $hash;
 	}
 }
 
