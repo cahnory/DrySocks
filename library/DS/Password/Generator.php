@@ -42,34 +42,87 @@ namespace DS\Password;
 class Generator
 {
 	protected $length		= 16;
-	protected $numeric		= true;
+	protected $digits		= true;
 	protected $lowercase	= false;
 	protected $uppercase	= false;
 	protected $symbols		= false;
 	
+	
+	/**
+	 * Define the use of lowercase chars
+	 * 
+	 * @param bool if the lowercases are used
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function useLowercase($use = true) {
 		$this->lowercase	=	$use;
 	}
 	
+	/**
+	 * Define the use of uppercase chars
+	 * 
+	 * @param bool if the uppercases are used
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function useUppercase($use = true) {
 		$this->uppercase	=	$use;
 	}
 	
-	public function useNumeric($use = true) {
-		$this->numeric	=	$use;
+	/**
+	 * Define the use of digit chars
+	 * 
+	 * @param bool if the digits are used
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
+	public function useDigits($use = true) {
+		$this->digits	=	$use;
 	}
 	
+	/**
+	 * Define the use of symbol chars
+	 * 
+	 * @param bool if the symbols are used
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function useSymbols($use = true) {
 		$this->symbols	=	$use;
 	}
 	
+	/**
+	 * Return the complet password charset
+	 * 
+	 * @return string the password charset
+	 * 
+	 * @access public
+	 */
 	public function getUsedChars() {
-		return	  ($this->numeric	? '0123456789' : '')
+		return	  ($this->digits	? '0123456789' : '')
 				. ($this->lowercase	? 'abcdefghijklmnopqrstuvwxyz' : '')
 				. ($this->uppercase	? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' : '')
 				. ($this->symbols	? '`!"?$?%^&*()_-+={[}]:;@\'~#|\<,>.?/' : '');
 	}
 	
+	/**
+	 * Generate a password
+	 *
+	 * TODO: make sure all used charsets are present (num, lower, upper, symbols)
+	 * 
+	 * @return string the password
+	 * 
+	 * @access public
+	 */
 	public function generate() {
 		$last		= NULL;
 		$char		= NULL;
