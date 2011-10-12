@@ -49,14 +49,47 @@ class Protector
 	protected $preSalts			= array();
 	protected $processor;
 	
+	/**
+	 * Add salt
+	 * 
+	 * The salt value is generate on hashing
+	 * 
+	 * @param SaltInterface $salt the salt
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function addSalt(SaltInterface $salt) {
 		$this->salts[]	= $salt;
 	}
 	
+	/**
+	 * Add preSalt
+	 * 
+	 * The salt has to be manually set in order
+	 * to make matching tests work (non variable)
+	 * 
+	 * @param SaltInterface $salt the salt
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function addPreSalt(SaltInterface $salt) {
 		$this->preSalts[]		= $salt;
 	}
 	
+	/**
+	 * Set hash properties
+	 * 
+	 * @param string $algorithm algorithm to use
+	 * @param string key        shared secret key
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function setHash($algorithm, $key = NULL) {
 		if(!in_array($algorithm, hash_algos())) {
 			throw new \Exception('Unknown algorithm '.$algorithm);
@@ -65,6 +98,16 @@ class Protector
 		$this->hashKey			= $key;
 	}
 	
+	/**
+	 * Set bcrypt properties
+	 * 
+	 * @param string $cost number of iterations
+	 * @param string salt  shared secret salt
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function setBcrypt($cost, $salt = NULL)
 	{
 	    if(preg_match('#^[./0-9A-Za-z]{0,22}$#', $salt) === 0) {
@@ -77,13 +120,31 @@ class Protector
 		$this->bcryptSalt	= $salt;
 	}
 	
+	/**
+	 * Set user function to alterate the hash
+	 * 
+	 * @param callback $processor alteration function
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function setProcessor($processor) {
 		if(!is_callable($processor)) {
-			throw new \Exception('Password protect processor must be callable');
+			throw new \Exception('Processor must be callable');
 		}
 		$this->processor	= $processor;
 	}
 	
+	/**
+	 * Set user function to alterate the hash
+	 * 
+	 * @param string $password the password to hash
+	 * 
+	 * @return string the hashed password
+	 * 
+	 * @access public
+	 */
 	public function hash($password) {
 		// Add shared salts
 		foreach($this->preSalts as $key => $salt) {
@@ -110,6 +171,16 @@ class Protector
 		return	$password;
 	}
 	
+	/**
+	 * Tel if a password and a hash match
+	 * 
+	 * @param string $password the password to test
+	 * @param string $hash     the hash
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function match($password, $hash) {
 		// Remove salts from hash
 		$salts	= array_reverse($this->salts);
