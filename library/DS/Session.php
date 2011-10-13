@@ -39,51 +39,88 @@ namespace DS;
  */
 class Session extends \ArrayObject
 {
-	protected $ip;
+	protected $footprint;
 	protected $data;
 	
 	public function __construct() {
 		// Start session if it's not 
 		@session_start(); // @ is dirty but I don't found viable alternativ
 		if(($error = error_get_last()) && $error['file'] === __FILE__ && $error['line'] == __LINE__ - 1) {
-			var_dump(session_id(),$error);
 			if($error['type'] === 2) {
-				exit();
 				throw new \Exception('Session couldn\'t start after headers were sent');
 			}
 		}
 		
-		$this->ip	=	$_SERVER['REMOTE_ADDR'];
+		$this->footprint	= $this->getFootprint();
 		
-		// Link to IP if not
-		if(!array_key_exists('ip', $_SESSION)) {
-			$_SESSION['data']	= $_SESSION;
-			$_SESSION['ip']		= $this->ip;
+		// Link to footprint if not
+		if(!array_key_exists('footprint', $_SESSION)) {
+			$_SESSION['data']		= $_SESSION;
+			$_SESSION['footprint']	= $this->footprint;
 		
-		// IPs don't match
-		} elseif($_SESSION['ip'] != $this->ip) {
+		// Footprints don't match
+		} elseif($_SESSION['footprint'] != $this->footprint) {
 			session_regenerate_id();
 			setcookie(session_name(), session_id());
-			$_SESSION['data']	= array();
-			$_SESSION['ip']		= $this->ip;
+			$_SESSION['data']		= array();
+			$_SESSION['footprint']	= $this->footprint;
 		
 		// Test if data key was deleted
 		} elseif(!array_key_exists('data', $_SESSION)) {
 			$_SESSION['data']	= $_SESSION;
-			unset($_SESSION['data']['ip']);
+			unset($_SESSION['data']['footprint']);
 		}
 		
 		parent::__construct(&$_SESSION['data']);
 	}
 	
+	/**
+	 * Return the client footprint
+	 * 
+	 * @return string client footprint
+	 * 
+	 * @access public
+	 */
+	public function getFootprint() {
+		return	$_SERVER['REMOTE_ADDR'] . $_SERVER['HTTP_USER_AGENT'];
+	}
+	
+	/**
+	 * Returns the session value at the specified offset
+	 * 
+	 * @param mixed $offset the offset with the value
+	 * 
+	 * @return mixed the value at the specified offset or null
+	 * 
+	 * @access public
+	 */
 	public function __get($offset) {
 		return	$this->offsetGet($offset);
 	}
 	
+	/**
+	 * Sets the value at the specified offset
+	 * 
+	 * @param mixed $offset the offset being set
+	 * @param mixed $value  the new value for the offset
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function __set($offset, $value) {
 		return	$this->offsetSet($offset, $value);
 	}
 	
+	/**
+	 * Returns the session value at the specified offset
+	 * 
+	 * @param mixed $offset the offset with the value
+	 * 
+	 * @return mixed the value at the specified offset or null
+	 * 
+	 * @access public
+	 */
 	public function offsetGet($offset) {
 		return	$this->offsetExists($offset)
 			?	parent::offsetGet($offset)
