@@ -46,64 +46,89 @@ class Executioner
 	}
 	
 	/**
-	 *	Send the template to execution
-	 * 
-	 *	@param string           $exe      template file/string to execute
-	 *	@param string           $type     template type (file or string)
-	 *	@param array            $data     data sent to the template
-	 *
-	 *	@return	string execution result
-	 *
-	 *	@access public
-	 */
-	public function execute($exe, $type, array $data) {
-		return	$this->doExecution($exe, $type, $data, $this->template);
-	}
-	
-	/**
 	 *	Execute the template in a safe context
 	 * 
-	 *	@param string           $exe      template file/string to execute
-	 *	@param string           $type     template type (file or string)
-	 *	@param array            $data     data sent to the template
-	 *	@param DS\View\Template $template
+	 *	@param stdClass         $definition Definition of the template to execute
+	 *	@param DS\View\Template $template   Execution invoker
 	 *
 	 *	@return	string execution result
 	 *
 	 *	@access protected
 	 */
-	protected function doExecution($exe, $type, array $data, \DS\View\Template $template) {
-		if($this->template !== $template) {
-			throw new \Exception('Provided DS\View\Template must be the same as executioner\'s one');
+	public function __invoke(\stdClass $definition, \DS\View\Template $template) {
+		if($definition !== $template->getExecuted()) {
+			throw new \Exception('Execution definition isn\'t valid');
 		}
 		
+		$this->template	= $template;
 		ob_start();
-		
+		try {
 		// Template file
-		if($type === 'file') {
-			extract($data);
-			include	func_get_arg(0);
-			
-		// Template string
-		} else {
-			extract($data);
-			eval('?>'.func_get_arg(0));
+			if($definition->type === 'file') {
+				extract($definition->data);
+				include	func_get_arg(0)->template;
+				
+			// Template string
+			} else {
+				extract($definition->data);
+				eval('?>'.func_get_arg(0)->template);
+			}
+		} catch(\exception $exception) {
+			ob_clean();
+			$this->template	= func_get_arg(1);
+			throw $exception;
 		}
 		
 		// Reset template, just in case ;)
-		$this->template	= func_get_arg(3);
+		$this->template	= func_get_arg(1);
 		return	ob_get_clean();
 	}
 	
-	public function __get($name) {
-		return	$this->template->$name;
+	/**
+	 * Returns the DS\View\Template value at the specified offset
+	 * 
+	 * When a template is executed, it could access and override
+	 * the $template var. In this case, a notice could be sent.
+	 * After execution, the $template var is always restored.
+	 * 
+	 * @param mixed $offset the offset with the value
+	 * 
+	 * @return mixed the value at the specified offset or null
+	 * 
+	 * @access public
+	 */
+	public function __get($offset) {
+		return	$this->template->$offset;
 	}
 	
-	public function __set($name, $value) {
-		$this->template->$name	= $value;
+	/**
+	 * Sets the DS\View\Template value at the specified offset
+	 * 
+	 * @param mixed $offset the offset being set
+	 * @param mixed $value  the new value for the offset
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
+	public function __set($offset, $value) {
+		$this->template->$offset	= $value;
 	}
 	
+	/**
+	 * Call a DS\view\Template method
+	 * 
+	 * @param mixed $offset the offset being set
+	 * @param mixed $value  the new value for the offset
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function __call($name, $attr) {
+		if(!is_callable(array($this->template, $name))) {
+			throw new \Exception('"'.$name.'" is not a valid DS\View\Template method');
+		}
 		return	call_user_func_array(array($this->template, $name), $attr);
 	}
 }

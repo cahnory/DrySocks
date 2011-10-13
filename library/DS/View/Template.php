@@ -53,6 +53,8 @@ class Template
 	private	$charset	= 'UTF-8';
 	private $data		= array();
 	private	$executing	= array();
+	private $wrappLevel	= 0;
+	private $wrappDepth	= 0;
 	private	$wrappers	= array();
 	private	$wrapped	= array();
 	private $paths		= array();
@@ -65,22 +67,59 @@ class Template
 		$this->executioner	=	new Template\Executioner($this);
 	}
 	
-	public function __get($name) {
-		return	array_key_exists($name, $this->data)
-			?	$this->data[$name]
+	/**
+	 * Returns the value at the specified offset
+	 * 
+	 * @param mixed $offset the offset with the value
+	 * 
+	 * @return mixed the value at the specified offset or null
+	 * 
+	 * @access public
+	 */
+	public function __get($offset) {
+		return	array_key_exists($offset, $this->data)
+			?	$this->data[$offset]
 			:	NULL;
 	}
 	
-	public function __set($name, $value) {
-		$this->data[$name]	= $value;
+	/**
+	 * Sets the value at the specified offset
+	 * 
+	 * @param mixed $offset the offset being set
+	 * @param mixed $value  the new value for the offset
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
+	public function __set($offset, $value) {
+		$this->data[$offset]	= $value;
 	}
 	
+	/**
+	 * Set a template repository path
+	 *
+	 * @param string $path template path to set
+	 * 
+	 * @return void
+	 *
+	 * @access public
+	 */
 	public function setPath($path) {
 		$path	= rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 		$this->unsetPath($path);
 		array_unshift($this->paths, $path);
 	}
 	
+	/**
+	 * Unset a template repository path
+	 *
+	 * @param string $path template path to unset
+	 * 
+	 * @return void
+	 *
+	 * @access public
+	 */
 	public function unsetPath($path) {
 		$path	= rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 		if(($key = array_search($path, $this->paths)) !== false) {
@@ -89,14 +128,14 @@ class Template
 	}
 	
 	/**
-	 *	Return the filename corresponding to a template name
+	 * Return the filename corresponding to a template name
 	 *
-	 *	@param string $template template name
-	 *	@param string $format   filename format to search
+	 * @param string $template template name
+	 * @param string $format   filename format to search
 	 * 
-	 *	@return	string filename or null if not found
+	 * @return string filename or null if not found
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function getFile($template, $type = NULL) {
 		if($type === NULL) {
@@ -121,11 +160,11 @@ class Template
 	}
 	
 	/**
-	 *	Return the current format or default one
+	 * Return the current format or default one
 	 * 
-	 *	@return	string format
+	 * @return string format
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function getFormat() {
 		$i		= 0;
@@ -133,7 +172,7 @@ class Template
 		
 		// Last forced format is used (first in stack) 
 		while(array_key_exists($i, $this->executing) && $format === NULL) {
-			$format	= $this->executing[$i]['format'];
+			$format	= $this->executing[$i]->format;
 			$i++;
 		}
 		
@@ -143,16 +182,22 @@ class Template
 			:	$this->format;
 	}
 	
+	public function getExecuted() {
+		return	array_key_exists(0, $this->executing)
+			?	$this->executing[0]
+			:	NULL;
+	}
+	
 	/**
-	 *	Return the result of template execution
+	 * Return the result of template execution
 	 *
-	 *	@param string $template template to execute
-	 *	@param array  $data     data used during execution
-	 *	@param string $format   template format
+	 * @param string $template template to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
 	 *
-	 *	@return	string execution result
+	 * @return string execution result
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function execute($template, array $data = array(), $format = NULL)
 	{
@@ -166,61 +211,97 @@ class Template
 	}
 	
 	/**
-	 *	Return the result of file execution
+	 * Return the result of file execution
 	 *
-	 *	@param string $filename file to execute
-	 *	@param array  $data     data used during execution
-	 *	@param string $format   template format
+	 * @param string $filename file to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
 	 *
-	 *	@return	string execution result
+	 * @return string execution result
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function executeFile($filename, array $data = array(), $format = NULL)
 	{
 		if(!is_readable($filename)) {
-			throw new \Exception('Template file '.$filename.' couldn\'t be loaded');
+			throw new \Exception('Template file "'.$filename.'" couldn\'t be loaded');
 		}
 		return	$this->executeTemplate('file', $filename, $data, $format);
 	}
 	
 	/**
-	 *	Return the result of string execution
-	 *	When it's possible, always prefered file execution
+	 * Return the result of string execution
+	 * When it's possible, always prefered file execution
 	 *
-	 *	@param string $string string to execute
-	 *	@param array  $data   data used during execution
-	 *	@param string $format template format
+	 * @param string $string string to execute
+	 * @param array  $data   data used during execution
+	 * @param string $format template format
 	 *
-	 *	@return	string execution result
+	 * @return string execution result
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function executeString($string, array $data = array(), $format = NULL)
 	{
 		return	$this->executeTemplate('string', $string, $data, $format);
 	}
 	
+	/**
+	 * Execute template of any type
+	 *
+	 * @param string $type     template type
+	 * @param string $template template to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
+	 *
+	 * @return string execution result
+	 *
+	 * @access protected
+	 */
 	protected function executeTemplate($type, $template, array $data, $format) {
-		$this->stackTemplate($type, $template, $format);
-		$result	=	$this->applyWrapper($this->executioner->execute($template, $type, $data));
+		$this->stackTemplate($type, $template, $data, $format);
+		try {
+			$result	= $this->executioner->__invoke($this->executing[0], $this);
+			$result	= $this->applyWrapper($result);
+		} catch(\exception $exception) {
+			$this->removeWrapper();
+			array_shift($this->executing);
+			throw $exception;
+		}
 		array_shift($this->executing);
 		return	$result;
 	}
 	
-	protected function stackTemplate($type, $template, $format = NULL) {
+	/**
+	 * Register template to the execution stack
+	 *
+	 * @param string $type     template type
+	 * @param string $template template to register
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
+	 *
+	 * @return void
+	 *
+	 * @access protected
+	 */
+	protected function stackTemplate($type, $template, array $data, $format) {
 		if($format === NULL) {
-			$format	=	$this->getFormat();
+			$format	= $this->getFormat();
 		}
-		array_unshift($this->executing, compact('type', 'template', 'format'));
+		$executed	= new \stdClass();
+		$executed->template	= $template;
+		$executed->type		= $type;
+		$executed->data		= $data;
+		$executed->format	= $format;
+		array_unshift($this->executing, $executed);
 	}
 	
 	/**
-	 *	Return content charset
+	 * Return content charset
 	 *
-	 *	@return	string
+	 * @return string
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function getCharset()
 	{
@@ -228,14 +309,14 @@ class Template
 	}
 	
 	/**
-	 *	Loop in execution stack
+	 * Loop in execution stack
 	 *
-	 *	@param string $back back length
-	 *	@param array  $data data used during execution
+	 * @param string $back back length
+	 * @param array  $data data used during execution
 	 *
-	 *	@return	string execution result
+	 * @return string execution result
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function loop($back = 0, array $data = array())
 	{
@@ -243,71 +324,171 @@ class Template
 			$data	=	$back;
 			$back	=	0;
 		}
+		// TODO: use executeTemplate;-
 		if(isset($this->executing[$back])) {
-			ob_start();
-			extract($data);
-			if($this->executing[$back][0] == 'file')
-				include	$this->executing[$back][1];
-			else
-				eval('?>'.$this->executing[$back][1]);
-			return	ob_get_clean();
+			return	$this->executeTemplate(
+				$this->executing[$back]->type,
+				$this->executing[$back]->template,
+				$this->executing[$back]->data,
+				$this->executing[$back]->format
+			);
 		}
 	}
 	
+	/**
+	 * Wrap the executed template by another one
+	 *
+	 * @param string $template template
+	 * @param array  $data     data used during template execution
+	 * @param string $format   template format
+	 *
+	 * @return void
+	 *
+	 * @access public
+	 */
 	public function wrap($template, array $data = array(), $format = NULL) {
 		if(!$filename = $this->getFile($template, $format)) {
-			throw new \Exception('Template '.$template.' couldn\'t be found');
+			throw new \Exception('Template "'.$template.'" couldn\'t be found');
 		}
 		$this->fileWrap($filename, $data, $format);
 	}
 	
+	/**
+	 * Wrap the executed template by a file
+	 *
+	 * @param string $filename template file
+	 * @param array  $data     data used during template execution
+	 * @param string $format   template format
+	 *
+	 * @return string execution result
+	 *
+	 * @access public
+	 */
 	public function fileWrap($filename, array $data = array(), $format = NULL) {
-		array_unshift($this->wrappers, array(
-			'type'			=> 'file',
-			'template'		=> $filename,
-			'data'			=> $data,
-			'format'		=> $format,
-			'executioner'	=> &$this->executing[0]));
+		if(!is_readable($filename)) {
+			throw new \Exception('Template file "'.$filename.'" couldn\'t be loaded');
+		}
+		$this->templateWrap('file', $filename, $data, $format);
 	}
 	
+	/**
+	 * Wrap the executed template by a string
+	 *
+	 * @param string $filename template string
+	 * @param array  $data     data used during template execution
+	 * @param string $format   template format
+	 *
+	 * @return string execution result
+	 *
+	 * @access public
+	 */
 	public function stringWrap($string, array $data = array(), $format = NULL) {
-		array_unshift($this->wrappers, array(
-			'type'			=> 'string',
-			'template'		=> $string,
-			'data'			=> $data,
-			'format'		=> $format,
-			'executioner'	=> &$this->executing[0]));
+		$this->templateWrap('string', $string, $data, $format);
 	}
 	
+	/**
+	 * Wrap template of any type
+	 *
+	 * @param string $type     template type
+	 * @param string $template template to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
+	 *
+	 * @return string execution result
+	 *
+	 * @access protected
+	 */
+	protected function templateWrap($type, $template, array $data, $format) {
+		if(!array_key_exists(0, $this->executing)) {
+			throw new \Exception('wrap method could only be called inside a template');
+		}
+		array_unshift($this->wrappers, array(
+			'type'			=> $type,
+			'template'		=> $template,
+			'data'			=> $data,
+			'format'		=> $format,
+			'executioner'	=> &$this->executing[0])
+		);
+	}
+	
+	/**
+	 * Return the content being wrapped
+	 *
+	 * @return string wrapped template execution result
+	 *
+	 * @access public
+	 */
 	public function getWrappedContent() {
 		return	array_key_exists(0, $this->wrapped)
 			?	$this->wrapped[0]
 			:	NULL; 
 	}
 	
+	/**
+	 * Apply wrapper to a template execution result
+	 *
+	 * @param string $content template execution result
+	 *
+	 * @return string wrapped execution result
+	 *
+	 * @access protected
+	 */
 	protected function applyWrapper($content) {
 		while(isset($this->wrappers[0]) && $this->wrappers[0]['executioner'] === $this->executing[0]) {
+			// Unstack the wrapper
 			$wrapper	= array_shift($this->wrappers);
+			
+			// Stack wrapped content
 			array_unshift($this->wrapped, $content);
-			if($wrapper['type'] == 'file') {
-				$content	= $this->executeFile($wrapper['template'], $wrapper['data'], $wrapper['format']);
-			} else {
-				$content	= $this->executeString($wrapper['template'], $wrapper['data'], $wrapper['format']);
+			
+			try {
+				// Execute wrapper
+				if($wrapper['type'] == 'file') {
+					$content	= $this->executeFile($wrapper['template'], $wrapper['data'], $wrapper['format']);
+				} else {
+					$content	= $this->executeString($wrapper['template'], $wrapper['data'], $wrapper['format']);
+				}
+
+			// TODO: verifier
+			} catch(\exception $exception) {
+				// Unstack wrapped content
+				array_shift($this->wrapped);
+				throw $exception;
 			}
+			
+			// Unstack wrapped content
 			array_shift($this->wrapped);
 		}
 		return	$content;
 	}
 	
 	/**
-	 *	Add the result of template execution at the end of view content
+	 * Remove wrapper associated to the current template
+	 * 
+	 * This method is called when Exception is thrown during
+	 * template execution.
 	 *
-	 *	@param string $template template to execute
-	 *	@param array  $data     data used during execution
+	 * @return void
 	 *
-	 *	@return	void
+	 * @access protected
+	 */
+	protected function removeWrapper() {
+		while(isset($this->wrappers[0]) && $this->wrappers[0]['executioner'] === $this->executing[0]) {
+			// Unstack the wrapper
+			$wrapper	= array_shift($this->wrappers);
+		}
+	}
+	
+	/**
+	 * Add the result of template execution at the end of view content
 	 *
-	 *	@access public
+	 * @param string $template template to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
+	 *
+	 * @return void
+	 *
+	 * @access public
 	 */
 	public function put($template, array $data = array(), $format = NULL)
 	{
@@ -315,14 +496,15 @@ class Template
 	}
 	
 	/**
-	 *	Add the result of file execution at the end of view content
+	 * Add the result of file execution at the end of view content
 	 *
-	 *	@param string $template file to execute
-	 *	@param array  $data     data used during execution
+	 * @param string $template file to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function putFile($filename, array $data = array(), $format = NULL)
 	{
@@ -330,27 +512,28 @@ class Template
 	}
 	
 	/**
-	 *	Add the result of string execution at the end of view content
+	 * Add the result of string execution at the end of view content
 	 *
-	 *	@param string $template string to execute
-	 *	@param array  $data     data used during execution
+	 * @param string $template string to execute
+	 * @param array  $data     data used during execution
+	 * @param string $format   template format
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function putString($string, array $data = array(), $format = NULL)
 	{
 		$this->view->setContent($this->view->getContent().$this->executeString($string, $data, $format));
 	}
 	/**
-	 *	Set content charset
+	 * Set content charset
 	 *
-	 *	@param string $charset content charset
+	 * @param string $charset content charset
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function setCharset($charset)
 	{
@@ -360,13 +543,13 @@ class Template
 	}
 	
 	/**
-	 *	Set the template and mime type to use by associated url format
+	 * Set the template and mime type to use by associated url format
 	 *
-	 *	@param string $format url format
+	 * @param string $format url format
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function setFormat($format)
 	{
@@ -391,15 +574,15 @@ class Template
 	}
 	
 	/**
-	 *	Bind an url format to a template type and mime
+	 * Bind an url format to a template type and mime
 	 *
-	 *	@param string $format url format
-	 *	@param string $type   template type
-	 *	@param string $mime   mime type
+	 * @param string $format url format
+	 * @param string $type   template type
+	 * @param string $mime   mime type
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access public
+	 * @access public
 	 */
 	public function bindFormat($urlFormat, $format, $mime = NULL)
 	{
@@ -412,11 +595,11 @@ class Template
 	}
 	
 	/**
-	 *	Set content-type header field
+	 * Set content-type header field
 	 *
-	 *	@return	void
+	 * @return void
 	 *
-	 *	@access private
+	 * @access private
 	 */
 	private	function setHeader()
 	{
