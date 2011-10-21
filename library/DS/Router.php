@@ -41,19 +41,18 @@ namespace DS;
  */
 class Router
 {
-	private	$cacheFilename;
-	private $cacheUpToDate;
+	protected $cache;
 	
-	private $aliasesBind	=	array();
-	private $aliasesPattern	=	array();
-	private $aliasesReplace	=	array();
+	protected $aliasesBind		=	array();
+	protected $aliasesPattern	=	array();
+	protected $aliasesReplace	=	array();
 	
-	private $routesBind		=	array();
-	private $routesPattern	=	array();
-	private $routesReplace	=	array();
+	protected $routesBind		=	array();
+	protected $routesPattern	=	array();
+	protected $routesReplace	=	array();
 	
-	private $cachedAliases	=	array();
-	private $cachedRoutes	=	array();
+	protected $cachedAliases	=	array();
+	protected $cachedRoutes		=	array();
 	
 	static private $regPatterns	=	array(
 		'alpha'		=>	'([a-zA-Z]+)',
@@ -65,49 +64,64 @@ class Router
 	);
 	static private $patterns	=	'alpha|alphanum|end|num|rest|seo';
 	
-	public function __destruct() {
-		if(is_writable($this->cacheFilename) && !$this->cacheUpToDate) {
-			file_put_contents($this->cacheFilename, serialize(array(
-				'aliasesBind'		=> $this->aliasesBind,
-				'aliasesPattern'	=> $this->aliasesPattern,
-				'aliasesReplace'	=> $this->aliasesReplace,
-				
-				'routesBind'		=> $this->routesBind,
-				'routesPattern'		=> $this->routesPattern,
-				'routesReplace'		=> $this->routesReplace,
-				
-				'cachedAliases'	=> $this->cachedAliases,
-				'cachedRoutes'	=> $this->cachedRoutes
-			)));
-		} 
+	/**
+	 * Set a cache
+	 * 
+	 * In order to get route from bind but also bind from route
+	 * regex and iterations are used which could consume ressources.
+	 * To avoid it as much as possible, a "dictionnary" of results
+	 * is made and could be cached.
+	 * 
+	 * @return \DS\CacheInterface $cache
+	 * 
+	 * @access public
+	 */
+	public function setCache(\DS\CacheInterface $cache) {
+		$this->cache			= $cache;
+		$this->aliasesBind		= (array)$this->cache->aliasesBind;
+		$this->aliasesPattern	= (array)$this->cache->aliasesPattern;
+		$this->aliasesReplace	= (array)$this->cache->aliasesReplace;
+		
+		$this->routesBind		= (array)$this->cache->routesBind;
+		$this->routesPattern	= (array)$this->cache->routesPattern;
+		$this->routesReplace	= (array)$this->cache->routesReplace;
+		
+		$this->cachedAliases	= (array)$this->cache->cachedAliases;
+		$this->cachedRoutes		= (array)$this->cache->cachedRoutes;
 	}
 	
-	public function setCacheFile($filename) {
-		// Read file if exist
-		if(is_readable($filename)) {
-			$content				= unserialize(file_get_contents($filename));
-			$this->cacheFilename	= realpath($filename);
-			if(is_array($content)) {
-				$this->aliasesBind		= $content['aliasesBind'];
-				$this->aliasesPattern	= $content['aliasesPattern'];
-				$this->aliasesReplace	= $content['aliasesReplace'];
-				
-				$this->routesBind		= $content['routesBind'];
-				$this->routesPattern	= $content['routesPattern'];
-				$this->routesReplace	= $content['routesReplace'];
-				
-				$this->cachedAliases	= $content['cachedAliases'];
-				$this->cachedRoutes		= $content['cachedRoutes'];
-				$this->cacheUpToDate	= true;
-			}
-		
-		// Or create file if folder is writable
-		} elseif(is_writable(dirname($filename))) {
-			fopen($filename, 'x');
-			$this->cacheFilename	= realpath($filename);
+	/**
+	 * Update the cache
+	 * 
+	 * @return void
+	 * 
+	 * @access protected
+	 */
+	protected function cache() {
+		if($this->cache) {
+			$this->cache->aliasesBind		= $this->aliasesBind;
+			$this->cache->aliasesPattern	= $this->aliasesPattern;
+			$this->cache->aliasesReplace	= $this->aliasesReplace;
+			
+			$this->cache->routesBind		= $this->routesBind;
+			$this->cache->routesPattern		= $this->routesPattern;
+			$this->cache->routesReplace		= $this->routesReplace;
+			
+			$this->cache->cachedAliases		= $this->cachedAliases;
+			$this->cache->cachedRoutes		= $this->cachedRoutes;
 		}
 	}
 	
+	/**
+	 * Bind an alias to a route
+	 * 
+	 * @param string $alias the alias, could contain wildcards
+	 * @param string $route the destination route
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function bind($alias, $route) {
 		$alias	= trim($alias, '/');
 		$route	= trim($route, '/');
@@ -148,10 +162,19 @@ class Router
 			
 			$this->cachedAliases	= array();
 			$this->cachedRoutes		= array();
-			$this->cacheUpToDate	= false;
+			$this->cache();
 		}
 	}
 	
+	/**
+	 * Unbind the specified alias
+	 * 
+	 * @param string $alias the alias to unbind
+	 * 
+	 * @return void
+	 * 
+	 * @access public
+	 */
 	public function unbind($alias) {
 		if(($key = array_search($alias, $this->aliasesBind)) !== false) {
 			array_splice($this->aliasesBind, $key, 1);
@@ -164,10 +187,19 @@ class Router
 			
 			$this->cachedAliases	= array();
 			$this->cachedRoutes		= array();
-			$this->cacheUpToDate	= false;
+			$this->cache();
 		}
 	}
 	
+	/**
+	 * Return the alias for the specified route
+	 * 
+	 * @param string $route the route
+	 * 
+	 * @return string the alias for the specified route
+	 * 
+	 * @access public
+	 */
 	public function getAlias($route) {
 		static $found = null;
 		$route	= trim($route, '/');
@@ -182,7 +214,7 @@ class Router
 					$url	=	$this->getAlias($url);
 				}
 				$this->cachedAliases[$route]	= $url;
-				$this->cacheUpToDate			= false;
+				$this->cache();
 				$found							= null;
 				return	$url;
 			}
@@ -190,6 +222,15 @@ class Router
 		return	$route;
 	}
 	
+	/**
+	 * Return the route for the specified alias
+	 * 
+	 * @param string $alias the alias
+	 * 
+	 * @return string the route for the specified alias
+	 * 
+	 * @access public
+	 */
 	public function getRoute($alias) {
 		static $found	= NULL;
 		static $aliases	= NULL;
@@ -212,7 +253,7 @@ class Router
 					$url	=	$this->getRoute($url);
 				}
 				$this->cachedRoutes[$alias]	= $url;
-				$this->cacheUpToDate		= false;
+				$this->cache();
 				$found						= null;
 				$aliases					= null;
 				$routes						= null;

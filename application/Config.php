@@ -22,7 +22,7 @@
 				$template->setFormat($app->request->getFormat());
 				
 				// Router
-				$app->router->setCacheFile('Cache/router.txt');
+				$app->router->setCache(new DS\Cache\File('Cache/router.txt'));
 				$app->router->bind('<:end>', 			'Document'); // homepage
 				$app->router->bind('Document/<:rest>',	'Document/read/$1');
 			}
