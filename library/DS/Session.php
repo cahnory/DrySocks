@@ -40,7 +40,6 @@ namespace DS;
 class Session extends \ArrayObject
 {
 	protected $footprint;
-	protected $data;
 	
 	public function __construct() {
 		// Start session if it's not 
