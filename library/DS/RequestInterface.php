@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  *
  * @category   DS
- * @package    DS\Router
+ * @package    DS\Request
  * @author     François "cahnory" Germain <cahnory@gmail.com>
  * @copyright  Copyright (c) 2011 François "cahnory" Germain
  * @license    http://www.opensource.org/licenses/mit-license.php
@@ -32,7 +32,7 @@ namespace DS;
 
 /**
  * @category   DS
- * @package    DS\Router
+ * @package    DS\Request
  * @author     François "cahnory" Germain <cahnory@gmail.com>
  * @copyright  Copyright (c) 2011 François "cahnory" Germain
  * @license    http://www.opensource.org/licenses/mit-license.php
