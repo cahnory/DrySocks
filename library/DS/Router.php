@@ -59,10 +59,11 @@ class Router
 		'alphanum'	=>	'([0-9a-zA-Z]+)',
 		'end'		=>	'(?=$)',
 		'num'		=>	'([0-9]+)',
+		'hex'		=>	'([A-Fa-f0-9]+)',
 		'rest'		=>	'(.+$)',
 		'seo'		=>	'([0-9a-zA-Z-_]+)'
 	);
-	static private $patterns	=	'alpha|alphanum|end|num|rest|seo';
+	static private $patterns	=	'alpha|alphanum|end|num|hex|rest|seo';
 	
 	/**
 	 * Set a cache
