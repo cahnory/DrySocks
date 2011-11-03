@@ -56,6 +56,12 @@ class Image
 		$this->height		= $height;
 	}
 	
+	public function __clone() {
+		$ressource	= $this->_getEmptyRessource($this->width, $this->height);
+		imagecopy($ressource, $this->ressource, 0, 0, 0, 0, $this->width, $this->height);
+		$this->ressource	= $ressource;
+	}
+	
 	protected function _swapRessources($ressource) {
 		imagedestroy($this->ressource);
 		$this->ressource	= $ressource;
@@ -220,6 +226,9 @@ class Image
 	}
 	
 	public function height($height = NULL, $homothetic = false) {
+		if(!$height) {
+			return	$this->height;
+		}
 		if($homothetic) {
 			$coef	= $height / $this->height;
 			$this->resize(round($this->width * $coef), $height);
