@@ -43,7 +43,7 @@ interface DispatcherInterface
 {
 	public function bind($name, ListenerInterface $event);
 	public function unbind($name);
-	public function trigger($name);
+	public function trigger($name, array $data = array());
 }
 
 ?>

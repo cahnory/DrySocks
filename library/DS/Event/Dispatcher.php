@@ -123,19 +123,20 @@ class Dispatcher implements DispatcherInterface
 	 *	Trigger event
 	 *
 	 *	@param string $name event name(space)
+	 *	@param array  $data event data
 	 *
 	 *	@return	dsEventDispatcher
 	 *
 	 *	@access public
 	 */
-	public	function	trigger($name)
+	public	function	trigger($name, array $data = array())
 	{
 		$depth	=	self::getNameSize($name) - 1;
 		
 		if(isset($this->names[$depth])) {
 			if($keys = array_keys($this->names[$depth], $name)) {
 				foreach($keys as $key) {
-					$this->events[$key]->call();
+					$this->events[$key]->call($data);
 				}
 			}
 		}
