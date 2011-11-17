@@ -41,17 +41,17 @@ namespace DS;
  */
 class Application
 {
-	private $path;
-	private $errorController;
+	protected $path;
+	protected $errorController;
 	
-	private $config;
-	private $errors		= array();
-	private $helpers	= array();
-	private	$loader;
-	private	$request;
-	private	$router;
-	private	$event;
-	private	$view;
+	protected $config;
+	protected $errors		= array();
+	protected $helpers	= array();
+	protected $loader;
+	protected $request;
+	protected $router;
+	protected $event;
+	protected $view;
 	
 	public function __construct(Application\ConfigInterface $config = NULL) {
 		$this->config	=	$config;
@@ -149,8 +149,8 @@ class Application
 			return false;
 		}
 		
-		$event	=	$this->getEvent();		
-		$event->trigger('dispatch');
+		$event	=	$this->getEvent();
+		$event->trigger('dispatch', array('app' => $this));
 		
 		// Get the requested route
 		$alias	= $this->getRequest()->getRoute();
@@ -158,53 +158,63 @@ class Application
 		// Get internal route from requested one
 		$route	= $this->getRouter()->getRoute($alias);
 		
-		// Split the route in controller/action/array(args)
-		if(!$route) {
-			$controller	= 'Index';
-			$action		= 'index';
-			$args		= array();
+		// Redirect to the main alias
+		if($alias !== ($redirect = $this->getRouter()->getAlias($route))) {
+			$this->getView()->setHeader('HTTP/1.1 301 Moved Permanently');
+			$this->view->setHeader('location', $this->request->getBase().$redirect);
+			$event->trigger('redirect', array('app' => $this));
+			$this->display();
+		
+		// Dispatch
 		} else {
-			$crumbs	= explode('/', $route);
-			if(!array_key_exists(1, $crumbs)) {
-				$controller	= $crumbs[0];
+			// Split the route in controller/action/array(args)
+			if(!$route) {
+				$controller	= 'Index';
 				$action		= 'index';
 				$args		= array();
 			} else {
-				$controller	= $crumbs[0];
-				$action		= $crumbs[1];
-				$args		= array_slice($crumbs, 2);
+				$crumbs	= explode('/', $route);
+				if(!array_key_exists(1, $crumbs)) {
+					$controller	= $crumbs[0];
+					$action		= 'index';
+					$args		= array();
+				} else {
+					$controller	= $crumbs[0];
+					$action		= $crumbs[1];
+					$args		= array_slice($crumbs, 2);
+				}
 			}
-		}
-		$controller	= $this->request->isCli()
-					? 'Cli\\'.$controller
-					: $controller;
-		
-		try {
-			$controller	= $this->prepareController($controller);
-			$event->trigger('control');
-			// Call controller action
-			$this->controlAction(
-				$controller,
-				$action,
-				$args
-			);
-			$this->display();
+			$controller	= $this->request->isCli()
+						? 'Cli\\'.$controller
+						: $controller;
 			
-		// Dispatch error
-		} catch(Controller\Exception $e) {
-			$this->throwError(404, $e);
-		
-		// Controller error
-		} catch(\Exception $e) {
-			$this->throwError(500, $e);
+			try {
+				$controller	= $this->prepareController($controller);
+				$event->trigger('control', array('app' => $this));
+				// Call controller action
+				$this->controlAction(
+					$controller,
+					$action,
+					$args
+				);
+				$this->display();
+				
+			// Dispatch error
+			} catch(Controller\Exception $e) {
+				$this->throwError(404, $e);
+			
+			// Controller error
+			} catch(\Exception $e) {
+				$this->throwError(500, $e);
+			}
 		}
 	}
 	
 	protected function display() {
 		if(!$this->request->isCli()) {
-			$this->event->trigger('display');
+			$this->event->trigger('display', array('app' => $this));
 			$this->view->send();
-			$this->event->trigger('shutdown');
+			$this->event->trigger('shutdown', array('app' => $this));
 		}
 	}
 	
@@ -213,7 +223,7 @@ class Application
 		if($this->errorController) {
 			try {
 				$event	= $this->getEvent();
-				$event->trigger('error');
+				$event->trigger('error', array('app' => $this));
 				$this->controlAction(
 					$this->prepareController($this->errorController),
 					'error'.$error,
@@ -235,7 +245,7 @@ class Application
 	protected function crash(\Exception $exception) {
 		try {
 			$event	= $this->getEvent();
-			$event->trigger('die');
+			$event->trigger('die', array('app' => $this));
 		} catch(\Exception $exception) {
 			
 		}
@@ -247,7 +257,7 @@ class Application
 		$this->errorController	= $name;
 	}
 	
-	private function prepareController($name) {
+	protected function prepareController($name) {
 		$class	= '\Controller\\'.$name;
 		
 		if(!class_exists($class, false) && !spl_autoload_call($class) && !class_exists($class, false)) {
@@ -257,7 +267,7 @@ class Application
 		return	new $class($this);
 	}
 	
-	private function controlAction($controller, $action, $args = array()) {
+	protected function controlAction($controller, $action, $args = array()) {
 		if(!method_exists($controller, $action)) {
 			throw new Controller\Exception('Error 404: action "'.$action.'" not found in "'.get_class($controller).'" controller');
 		}
