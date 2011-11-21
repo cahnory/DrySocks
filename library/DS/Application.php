@@ -268,8 +268,13 @@ class Application
 	}
 	
 	protected function controlAction($controller, $action, $args = array()) {
-		if(!method_exists($controller, $action)) {
+		try {
+			$reflection	= new \ReflectionMethod($controller, $action); 
+		} catch(\Exception $e) {
 			throw new Controller\Exception('Error 404: action "'.$action.'" not found in "'.get_class($controller).'" controller');
+		}
+		if(!$reflection->isPublic()) {
+			throw new Controller\Exception('Error 404: action "'.$action.'" must be public in "'.get_class($controller).'" controller');
 		}
 		return	call_user_func_array(array($controller, $action), $args);
 	}
