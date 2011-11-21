@@ -46,6 +46,10 @@ abstract class Controller
 	public function __construct($app) {
 		$this->app	=	$app;
 	}
+	
+	public function __get($name) {
+		return	$this->app->__get($name);
+	}
 }
 
 ?>
