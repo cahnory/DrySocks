@@ -96,6 +96,14 @@ class Request implements RequestInterface
 	private $arg = array();
 	
     /**
+     * The method type
+     *
+     * @var string
+     * @access private
+     */
+	private $method;
+	
+    /**
      * If the request is asynchronous (Ajax)
      *
      * @var bool
@@ -161,10 +169,11 @@ class Request implements RequestInterface
 	
 	public function __construct(array $options = array()) {
 		$options	=	array_merge(array(
-			'files'	=> $_FILES,
-			'post'	=> $_POST,
-			'get'	=> $_GET,
-			'arg'	=> $_SERVER['argv']
+			'files'		=> $_FILES,
+			'post'		=> $_POST,
+			'get'		=> $_GET,
+			'arg'		=> $_SERVER['argv'],
+			'method'	=> $_SERVER['REQUEST_METHOD']
 		), $options);
 		
 		// Usefull request properties
@@ -177,6 +186,8 @@ class Request implements RequestInterface
 		
 		// Variables and items passed to the script
 		if(!$this->isCli) {
+			$this->method	= strtoupper($options['method']);
+			
 			$this->files	= self::formatFilesArray($options['files']);
 			if (get_magic_quotes_gpc()) {
 				$this->post	= array_map(array('self', 'removeMagicQuotes'), $options['post']);
@@ -258,6 +269,30 @@ class Request implements RequestInterface
 	 */
 	public function isCli() {
 		return	$this->isCli;
+	}
+		
+	/**
+	 * Returns if input method is same as request method
+	 *
+	 * @param string $method the input method
+	 *
+	 * @return string
+	 *
+	 * @access public
+	 */
+	public function isMethod($method) {
+		return	$this->method === strtoupper($method);
+	}
+		
+	/**
+	 * Returns the request method
+	 *
+	 * @return string
+	 *
+	 * @access public
+	 */
+	public function getMethod() {
+		return	$this->method;
 	}
 		
 	/**
