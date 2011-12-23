@@ -7,9 +7,9 @@
 <!--[if gt IE 9]><!--><html class="no-js not-ie" id="no-js"><!--<![endif]-->
 <head>
 	<meta charset="utf-8" />
-	<base href="<%= $this->request->getBase() %>" />
+	<base href="<?php echo $this->request->getBase() ?>" />
 	<!-- !Meta -->
-	<title><%= $this->title %></title>
+	<title><?php echo $this->title ?></title>
 	
 	<!-- !Stylesheets -->
 	<link rel="stylesheet" type="text/css" href="css/main.css" />
@@ -37,6 +37,6 @@
 		</h1>
 	</div>
 	
-	<%= $this->getWrappedContent() %>
+	<?php echo $this->getWrappedContent() ?>
 </body>
 </html>
