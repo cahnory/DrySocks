@@ -40,12 +40,14 @@ namespace DS;
  *  http://www.domain.com/folder/sub/product/view/1.html
  *
  * Here are the generated var
- *  url:	'/folder/sub/product/view/1.html'
- *  path:	'/folder/sub/product/view/1'
- *  base:	'/folder/sub/'
- *  route:	'product/view/1'
- *  format:	'html'
- *  crumbs:	array('product', 'view', '1')
+ *	host:		'www.domain.com'
+ *  protocol:	'http'
+ *  url:		'/folder/sub/product/view/1.html'
+ *  path:		'/folder/sub/product/view/1'
+ *  base:		'/folder/sub/'
+ *  route:		'product/view/1'
+ *  format:		'html'
+ *  crumbs:		array('product', 'view', '1')
  *
  * @category   DS
  * @package    DS\Request
@@ -128,6 +130,22 @@ class Request implements RequestInterface
 	private $format;
 	
     /**
+     * The url protocol (http, https)
+     *
+     * @var string
+     * @access private
+     */
+	private $protocol;
+	
+    /**
+     * The host
+     *
+     * @var string
+     * @access private
+     */
+	private $host;
+	
+    /**
      * The url without host (base+route)
      *
      * @var string
@@ -172,7 +190,7 @@ class Request implements RequestInterface
 			'files'		=> $_FILES,
 			'post'		=> $_POST,
 			'get'		=> $_GET,
-			'arg'		=> $_SERVER['argv'],
+			'arg'		=> array_key_exists('argv', $_SERVER) ? $_SERVER['argv'] : array_keys($_REQUEST),
 			'method'	=> $_SERVER['REQUEST_METHOD']
 		), $options);
 		
@@ -199,6 +217,10 @@ class Request implements RequestInterface
 			$this->input	= array_merge($this->get, $this->post, $this->files);
 		
 			// URL
+			$this->protocol	= array_key_exists('HTTPS', $_SERVER) && $_SERVER['HTTPS'] !== 'off'
+						? 'https'
+						: 'http';
+			$this->host	= $_SERVER['HTTP_HOST'];
 			$this->url	= array_key_exists('REDIRECT_URL', $_SERVER)
 						? $_SERVER['REDIRECT_URL']
 						: (false != $pos = strpos($_SERVER['REQUEST_URI'], '?')
@@ -291,6 +313,17 @@ class Request implements RequestInterface
 	 *
 	 * @access public
 	 */
+	public function getHost() {
+		return	$this->host;
+	}
+		
+	/**
+	 * Returns the request method
+	 *
+	 * @return string
+	 *
+	 * @access public
+	 */
 	public function getMethod() {
 		return	$this->method;
 	}
@@ -363,7 +396,7 @@ class Request implements RequestInterface
 	 */
 	public function getRouteCrumb($n) {
 		return	array_key_exists($n, $this->routeCrumbs)
-			?	$this->routeCrumbs($n)
+			?	$this->routeCrumbs[$n]
 			:	null;
 	}
 		
@@ -411,9 +444,11 @@ class Request implements RequestInterface
 					$stack[0]	=	self::formatFilesArray($value);
 				}
 			} else {
-				if(!array_key_exists($name, $stack[0]))
+				if(!array_key_exists($name, $stack[0])) {
 					$stack[0][$name]	=	array();
-				array_unshift($stack, &$stack[0][$name]);
+				}
+				array_unshift($stack, null);
+				$stack[0]	=  &$stack[1][$name];
 			}
 			if (is_array($value)) {
 				$stack[0]	=	self::formatFilesArray($value);
