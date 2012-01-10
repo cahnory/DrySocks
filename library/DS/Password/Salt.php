@@ -67,7 +67,7 @@ abstract class Salt implements SaltInterface
 	 * @access public
 	 */
 	public function __toString() {
-		return	$this->getValue;
+		return	$this->getValue();
 	}
 	
 	/**
