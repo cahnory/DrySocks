@@ -297,6 +297,37 @@ class Template
 	}
 	
 	/**
+	 * Return a var in the scope of the template being
+	 * executed, by its name.
+	 * If the var is not set, empty or with a bad type,
+	 * a default value is returned.
+	 *
+	 * @param string $name     var name
+	 * @param mixed  $default  the var default value
+	 * @param mixed  $type     if the type must match with
+	 *                         default value, a class name
+	 *                         or interface name
+	 *
+	 * @return string value or default value
+	 *
+	 * @access public
+	 */
+	public function attribute($name, $default = NULL, $type = true) {
+		if(!array_key_exists($name, $this->executing[0]->data)) {
+			$data	= $default;
+		} else {
+			$data	= $this->executing[0]->data[$name];
+			if($data === NULL || $type
+			&& (gettype($data) !== gettype($default)
+				|| is_string($type) && !is_a($data, $type)
+			)) {
+				$data = $default;
+			}
+		}
+		return	$data;
+	}
+	
+	/**
 	 * Return content charset
 	 *
 	 * @return string
