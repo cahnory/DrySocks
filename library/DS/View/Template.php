@@ -318,7 +318,7 @@ class Template
 		} else {
 			$data	= $this->executing[0]->data[$name];
 			if($data === NULL || $type
-			&& (gettype($data) !== gettype($default)
+			&& ($default !== NULL && gettype($data) !== gettype($default)
 				|| is_string($type) && !is_a($data, $type)
 			)) {
 				$data = $default;
